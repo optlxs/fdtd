@@ -1,0 +1,132 @@
+switchtolayout;
+deleteall;
+clear;
+
+matlabload("E:\pos.mat");
+nm=1e-9;
+um=1e-6;
+
+number=design_number;
+period=design_period*um;
+focal =design_focal_4*um;
+
+wave_max =design_wave_5*um;
+wave_min =design_wave_4*um;
+
+height_atom=design_height_atom*um;
+height_sub =design_height_sub*um;
+material_atom=design_material_atom;
+material_sub =design_material_sub;
+index_atom=design_index_atom;
+index_sub =design_index_sub;
+ 
+radius_x=cal_radius_x*nm;
+radius_y=cal_radius_y*nm;
+pos_x   =cal_pos_x*um;
+pos_y   =cal_pos_y*um;
+theta   =cal_angle;
+flag    =cal_flag;
+
+radius_lens=number*period;
+
+addgroup;
+set("name","weijiegou");
+for (i=1:2*number)
+{ 
+for(j=1:2*number)
+{
+if(flag(i,j))
+{ 
+addcircle;
+name=material_atom+" "+num2str(i)+"/"+num2str(j);
+set("name",name);                   
+set("index",index_atom);
+set("render type","wireframe");
+set("x",pos_x(i,j));
+set("y",pos_y(i,j));
+set("z min",0);
+set("z max",height_atom);
+set("radius",radius_x(i,j));
+set("make ellipsoid",1);
+set("radius 2",radius_y(i,j));
+set("first axis","z");
+set("rotation 1",theta(i,j));
+addtogroup("weijiegou");
+}
+}
+}
+
+addrect;
+set("name",material_sub);
+set("index",index_sub);
+set("render type","wireframe");
+set("x",0);   
+set("x span",2*radius_lens+6*wave_max);
+set("y",0);
+set("y span",2*radius_lens+6*wave_max);
+set("z min",-height_sub);
+set("z max",0);
+
+addplane;
+set("name","Ex");
+set("x",0);
+set("x span",2*radius_lens+2*wave_max);
+set("y",0);
+set("y span",2*radius_lens+2*wave_max);
+set("z",-height_sub-wave_max);
+set("wavelength start",wave_min);
+set("wavelength stop",wave_max);
+
+addplane;
+set("name","Ey");
+set("x",0);
+set("x span",2*radius_lens+2*wave_max);
+set("y",0);
+set("y span",2*radius_lens+2*wave_max);
+set("z",-height_sub-wave_max);
+set("wavelength start",wave_min);
+set("wavelength stop",wave_max);
+set("polarization angle",90);
+set("phase",90);
+
+
+addfdtd;
+set("x",0); 
+set("x span",2*radius_lens+2*wave_max);
+set("y",0);
+set("y span",2*radius_lens+2*wave_max);
+set("z min",-height_sub-2*wave_max);
+set("z max",110*um);
+set("x min bc","PML");
+set("x max bc","PML");
+set("y min bc","PML");
+set("y max bc","PML");
+set("z min bc","PML");
+set("z max bc","PML");
+set("mesh accuracy",6);
+
+
+addprofile;
+set("name","fenbu");
+set("monitor type","2D X-normal");  
+set("y",0);
+set("y span",2*radius_lens+2*wave_max);
+set("z min",0);
+set("z max",110*um);
+set("override global monitor settings",1);
+set("use wavelength spacing",1);
+set("use source limits",1);
+set("frequency points",41);
+
+addpower;
+set("name","focal");
+set("monitor type","2D Z-normal");  
+set("x",0);
+set("x span",2*radius_lens+2*wave_max);
+set("y",0);
+set("y span",2*radius_lens+2*wave_max);
+set("z",focal);
+set("override global monitor settings",1);
+set("use wavelength spacing",1);
+set("use source limits",1);
+set("frequency points",41);

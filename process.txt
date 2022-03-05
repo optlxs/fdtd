@@ -1,0 +1,90 @@
+clc;clear all;close all;
+
+load('D:\data.mat');
+
+data_phase_compen=data_phase_compen_all/pi*180;
+data_phase_proga =data_phase_proga_all/pi*180;
+data_radius_x    =data_radius_x_all;
+data_radius_y    =data_radius_y_all;
+
+design_height_atom=;
+design_height_sub =;
+design_material_atom='Si';
+design_material_sub ='CaF2';
+design_index_atom=;
+design_index_sub =;
+
+design_name='E:\pos.mat';
+design_number =;
+design_period =;
+design_focal_4=;
+design_focal_r=;
+design_focal_5=;
+design_wave_4 =4;
+design_wave_r =4.3;
+design_wave_5 =5;
+
+compen_corr=1;
+
+para_x=[-design_number+0.5:1:design_number-0.5];
+para_y=[design_number-0.5:-1:-design_number+0.5]';
+[para_matrix_x,para_matrix_y]=meshgrid(para_x,para_y);
+cal_pos_x=para_matrix_x*design_period;
+cal_pos_y=para_matrix_y*design_period;
+
+phase_theta=zeros(2*design_number,2*design_number);
+
+for cy_i=1:2*design_number
+    for cy_j=1:2*design_number        
+        if (para_matrix_x(cy_i,cy_j)>0) && (para_matrix_y(cy_i,cy_j)>0)
+            phase_theta(cy_i,cy_j)=atan(abs(para_matrix_y(cy_i,cy_j)/para_matrix_x(cy_i,cy_j)))/pi*180;
+        elseif (para_matrix_x(cy_i,cy_j)<0) && (para_matrix_y(cy_i,cy_j)>0)
+            phase_theta(cy_i,cy_j)=180-atan(abs(para_matrix_y(cy_i,cy_j)/para_matrix_x(cy_i,cy_j)))/pi*180;
+        elseif (para_matrix_x(cy_i,cy_j)<0) && (para_matrix_y(cy_i,cy_j)<0)
+            phase_theta(cy_i,cy_j)=180+atan(abs(para_matrix_y(cy_i,cy_j)/para_matrix_x(cy_i,cy_j)))/pi*180;
+        else
+            phase_theta(cy_i,cy_j)=360-atan(abs(para_matrix_y(cy_i,cy_j)/para_matrix_x(cy_i,cy_j)))/pi*180;
+        end
+    end
+end
+
+para_matrix=para_matrix_x.^2+para_matrix_y.^2;
+para_matrix_sqrt=sqrt(para_matrix);
+cal_flag=ones(size(para_matrix_sqrt));
+cal_flag(para_matrix_sqrt>design_number)=0;
+
+phase_focal_4=360*(design_focal_4-sqrt(design_focal_4^2+para_matrix*design_period^2))/design_wave_4;
+phase_focal_r=360*(design_focal_r-sqrt(design_focal_r^2+para_matrix*design_period^2))/design_wave_r;
+phase_focal_5=360*(design_focal_5-sqrt(design_focal_5^2+para_matrix*design_period^2))/design_wave_5;
+phase_4=phase_focal_4+phase_theta*2;
+phase_r=phase_focal_r+phase_theta*2;
+phase_5=phase_focal_5+phase_theta*2;
+
+phase_4(para_matrix_sqrt>design_number)=nan;
+phase_r(para_matrix_sqrt>design_number)=nan;
+phase_5(para_matrix_sqrt>design_number)=nan;
+phase_focal_diff=phase_4-phase_5;
+
+phase_r_mod=mod(phase_r,360);
+design_phase_compen=(phase_4-min(phase_4(:)))-(phase_5-min(phase_5(:)))+min(data_phase_compen)+compen_corr;
+
+cal_radius_x   =zeros(2*design_number,2*design_number);
+cal_radius_y   =zeros(2*design_number,2*design_number);
+cal_angle      =zeros(2*design_number,2*design_number);
+cal_phase_proga=zeros(2*design_number,2*design_number);
+
+for para_1=1:2*design_number
+    for para_2=1:2*design_number
+        [para_3,para_number_1]=min(abs(design_phase_compen(para_1,para_2)-data_phase_compen));
+        cal_radius_x(para_1,para_2)=data_radius_x(para_number_1);
+        cal_radius_y(para_1,para_2)=data_radius_y(para_number_1);
+
+        cal_phase_proga(para_1,para_2)=data_phase_proga(para_number_1);
+        cal_angle(para_1,para_2)=(phase_r_mod(para_1,para_2)-cal_phase_proga(para_1,para_2))/2;  
+    end
+end
+
+save(design_name,'design_wave_4','design_wave_5','design_period','design_number','design_focal_4','design_focal_5',...
+    'design_height_atom','design_height_sub','design_material_atom','design_material_sub','design_index_atom','design_index_sub',...
+    'cal_flag','cal_pos_x','cal_pos_y','cal_radius_x','cal_radius_y','cal_angle');
+
