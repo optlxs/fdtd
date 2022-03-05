@@ -1,0 +1,218 @@
+switchtolayout;
+deleteall;
+clear;
+nm=1e-9;
+um=1e-6;
+
+index_Si=3.43;
+index_CaF2=1.35;
+
+period=1.9*um; 
+
+lambda_min=4.0*um;
+lambda_max=5.0*um;
+
+height_atom=5*um;
+height_sub=2*lambda_max;
+
+radius_1=100*nm;
+radius_2=900*nm;
+
+
+addcircle;
+set("name","Si");
+set("index",index_Si);
+set("render type","wireframe");
+set("detail",0.1);
+set("x",0);
+set("y",0);
+set("z min",0);
+set("z max",height_atom);
+set("radius",radius_1);
+set("make ellipsoid",1);
+set("radius 2",radius_2); 
+
+addrect;
+set("name","CaF2");
+set("index",index_CaF2);
+set("render type","wireframe");
+set("detail",0.1);
+set("x",0);   
+set("x span",period+2*lambda_max);
+set("y",0);
+set("y span",period+2*lambda_max);
+set("z min",-height_sub);
+set("z max",0);
+
+addplane;
+set("name","Ex");
+set("x",0);
+set("x span",period+2*lambda_max);
+set("y",0);
+set("y span",period+2*lambda_max);
+set("z",-1*lambda_max);
+set("override global source settings",1);
+set("wavelength start",lambda_min);
+set("wavelength stop",lambda_max);
+
+addfdtd;
+set("x",0); 
+set("x span",period);  
+set("y",0);
+set("y span",period);
+set("z min",-height_sub);
+set("z max",height_atom+3*lambda_max);
+set("x min bc","Periodic");
+set("x max bc","Periodic");
+set("y min bc","Periodic");
+set("y max bc","Periodic");
+set("z min bc","PML");
+set("z max bc","PML");
+set("mesh accuracy",6);
+
+addprofile;
+set("name","out_single");
+set("monitor type","Point");  
+set("x",0);
+set("y",0);
+set("z",height_atom+2*lambda_max);
+set("override global monitor settings",1);
+set("use wavelength spacing",0);
+set("use source limits",1);
+set("frequency points",1);
+
+addprofile;
+set("name","out_wavelength");
+set("monitor type","Point");  
+set("x",0);
+set("y",0);
+set("z",height_atom+2*lambda_max);
+set("override global monitor settings",1);
+set("use wavelength spacing",1);
+set("use source limits",1);
+set("frequency points",41);
+
+addprofile;
+set("name","out_frequency");
+set("monitor type","Point");  
+set("x",0);
+set("y",0);
+set("z",height_atom+2*lambda_max);
+set("override global monitor settings",1);
+set("use wavelength spacing",0);
+set("use source limits",1);
+set("frequency points",41);
+
+addpower;
+set("name","out_surface_single");
+set("monitor type","2D Z-normal");  
+set("x",0); 
+set("x span",period);  
+set("y",0);
+set("y span",period);
+set("z",height_atom+2*lambda_max);
+set("override global monitor settings",1);
+set("use wavelength spacing",0);
+set("use source limits",1);
+set("frequency points",1);
+
+addpower;
+set("name","out_surface_wavelength");
+set("monitor type","2D Z-normal");  
+set("x",0); 
+set("x span",period);  
+set("y",0);
+set("y span",period);
+set("z",height_atom+2*lambda_max);
+set("override global monitor settings",1);
+set("use wavelength spacing",1);
+set("use source limits",1);
+set("frequency points",41);
+
+addpower;
+set("name","out_surface_frequency");
+set("monitor type","2D Z-normal");  
+set("x",0); 
+set("x span",period);  
+set("y",0);
+set("y span",period);
+set("z",height_atom+2*lambda_max);
+set("override global monitor settings",1);
+set("use wavelength spacing",0);
+set("use source limits",1);
+set("frequency points",41);
+
+para_start   =100;
+para_end     =900;
+para_accuracy=10;
+
+for (para_x=para_start; para_x<=para_end; para_x=para_x+para_accuracy)
+{
+
+setnamed("Si","radius",para_x*nm);
+para_name="phase sweep radius1="+num2str(para_x);
+
+addsweep(0);
+setsweep("sweep", "name", para_name);
+setsweep(para_name, "type", "Ranges");
+setsweep(para_name, "number of points",(para_end-para_start)/para_accuracy+1); 
+
+para_radius_2 = struct;
+para_radius_2.Name = "radius 2";
+para_radius_2.Parameter = "::model::Si::radius 2";
+para_radius_2.Type = "Length";
+para_radius_2.Start =para_start*nm;
+para_radius_2.Stop = para_end*nm;
+para_radius_2.Units = "microns";
+addsweepparameter(para_name, para_radius_2);
+
+result_1 = struct;
+result_1.Name = "phase single";
+result_1.Result = "::model::out_single::E";
+addsweepresult(para_name, result_1);
+
+result_2 = struct;
+result_2.Name = "phase wavelength";
+result_2.Result = "::model::out_wavelength::E";
+addsweepresult(para_name, result_2);
+
+result_3 = struct;
+result_3.Name = "phase frequency";
+result_3.Result = "::model::out_frequency::E";
+addsweepresult(para_name, result_3);
+
+result_4 = struct;
+result_4.Name = "transition single";
+result_4.Result = "::model::out_surface_single::T";
+addsweepresult(para_name, result_4);
+
+result_5 = struct;
+result_5.Name = "transition wavelength";
+result_5.Result = "::model::out_surface_wavelength::T";
+addsweepresult(para_name, result_5);
+
+result_6 = struct;
+result_6.Name = "transition frequency";
+result_6.Result = "::model::out_surface_frequency::T";
+addsweepresult(para_name, result_6);
+
+runsweep(para_name);
+
+E_phase_single    =getsweepresult(para_name,"phase single");
+E_phase_wavelength=getsweepresult(para_name,"phase wavelength");
+E_phase_frequency =getsweepresult(para_name,"phase frequency");
+E_trans_single    =getsweepresult(para_name,"transition single");
+E_trans_wavelength=getsweepresult(para_name,"transition wavelength");
+E_trans_frequency =getsweepresult(para_name,"transition frequency");
+
+result_phase_single    =pinch(angle(E_phase_single.Ex));
+result_phase_wavelength=pinch(angle(E_phase_wavelength.Ex));
+result_phase_frequency =pinch(angle(E_phase_frequency.Ex));
+
+result_trans_single    =E_trans_single.T;
+result_trans_wavelength=E_trans_wavelength.T;
+result_trans_frequency =E_trans_frequency.T;
+
+filename="D:\radius1_"+num2str(para_x);
+matlabsave(filename,result_phase_single,result_phase_wavelength,result_phase_frequency,result_trans_single,result_trans_wavelength,result_trans_frequency);
+}
